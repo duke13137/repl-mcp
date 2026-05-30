@@ -208,7 +208,7 @@
               
               (log/log! {:level :info :msg "Profiling completed successfully"
                          :data {:total-samples (get-in comprehensive-result [:summary :total-samples])}})
-              
+                  
               comprehensive-result)
             
             {:error (:error eval-result) :status :error}))

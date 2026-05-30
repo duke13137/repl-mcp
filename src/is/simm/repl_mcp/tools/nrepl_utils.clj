@@ -94,11 +94,25 @@
   (let [combined (nrepl/combine-responses responses)
         ;; Extract :value directly from combined response (it's a vector of strings)
         ;; Don't use nrepl/response-values as it calls read-string which fails on #object
-        values (:value combined)]
+        values (:value combined)
+        status (set (:status combined))]
     (cond
       (:err combined)
       {:status :error
        :error (str (:err combined)
+                   (when-let [output (:out combined)]
+                     (str "\nOutput: " output)))}
+
+      (:ex combined)
+      {:status :error
+       :error (str "Exception: " (:ex combined)
+                   (when-let [output (:out combined)]
+                     (str "\nOutput: " output)))}
+
+      (or (contains? status :eval-error)
+          (contains? status "eval-error"))
+      {:status :error
+       :error (str "Evaluation failed"
                    (when-let [output (:out combined)]
                      (str "\nOutput: " output)))}
 

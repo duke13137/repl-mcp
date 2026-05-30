@@ -46,7 +46,7 @@
         :extra-deps {org.slf4j/slf4j-api {:mvn/version "2.0.18"}
                      org.slf4j/slf4j-simple {:mvn/version "2.0.18"}}}
   :build {:deps {io.github.clojure/tools.build
-                 {:mvn/version "0.10.13"}}
+                 {:mvn/version "0.10.14"}}
           :ns-default build}
   :test {:extra-paths ["test"]
          :jvm-opts ["-Djdk.attach.allowAttachSelf"

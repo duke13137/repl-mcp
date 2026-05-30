@@ -3,6 +3,7 @@
   (:require 
    [clojure.string :as str]
    [clojure.java.io :as io]
+   [clojure.edn :as edn]
    [taoensso.telemere :as log]
    [is.simm.repl-mcp.tools.nrepl-utils :as nrepl-utils]))
 
@@ -23,7 +24,14 @@
 (defn process-find-symbol-response
   "Process find-symbol response combining multiple results"
   [responses]
-  (let [combined-results (mapcat #(:value % []) responses)
+  (let [occurrence-results (keep (fn [{:keys [occurrence]}]
+                                   (when occurrence
+                                     (if (string? occurrence)
+                                       (edn/read-string occurrence)
+                                       occurrence)))
+                                 responses)
+        combined-results (concat (mapcat #(:value % []) responses)
+                                 occurrence-results)
         final-result (first (filter #(contains? % :status) responses))]
     (-> (or final-result {})
         (assoc :value combined-results)
@@ -47,7 +55,7 @@
   (let [namespace-path (str/replace namespace-name "." "/")
         namespace-path-underscores (str/replace namespace-name "-" "_")
         file-paths [(str "src/" namespace-path ".clj")
-                   (str "src/" namespace-path-underscores ".clj") 
+                   (str "src/" (str/replace namespace-path-underscores "." "/") ".clj")
                    (str "src/main/clojure/" namespace-path ".clj")
                    (str namespace-path ".clj")
                    ;; Handle the case where we might be in a different working directory
@@ -80,12 +88,13 @@
                        :data {:symbol symbol-str :file existing-file}})
             
             (let [result (nrepl-utils/safe-nrepl-message nrepl-client
-                           {:op "find-symbol"
-                            :ns namespace-name
-                            :sym function-name
-                            :file existing-file
-                            :line "1"
-                            :column "1"}
+                            {:op "find-symbol"
+                             :ns namespace-name
+                             :name function-name
+                             :file existing-file
+                             :line 1
+                             :column 1
+                             :ignore-errors "true"}
                            :timeout timeout
                            :operation-name "Function caller search")]
               (if (= (:status result) :success)
@@ -177,10 +186,11 @@
             (let [result (nrepl-utils/safe-nrepl-message nrepl-client
                            {:op "find-symbol"
                             :ns namespace-name
-                            :sym symbol-name
+                            :name symbol-name
                             :file existing-file
-                            :line "1"
-                            :column "1"}
+                            :line 1
+                            :column 1
+                            :ignore-errors "true"}
                            :timeout timeout
                            :operation-name "Symbol usage search")]
               
@@ -232,7 +242,9 @@
         :else
         (str "Found " (:total analysis) " usage(s) for " namespace "/" symbol ":\n"
              (str/join "\n" (map (fn [usage]
-                                   (str "  " (:file usage) " (line " (:line usage) ")"))
+                                   (str "  " (:file usage)
+                                        " (line " (:line-beg usage)
+                                        ", col " (:col-beg usage) ")"))
                                  usages)))))))
 
 ;; ===============================================
@@ -291,17 +303,7 @@
 
 (def tools
   "Navigation tool definitions for PlumCP"
-  [{:name "call-hierarchy"
-    :description "Analyze function call hierarchy (callers) in a Clojure project"
-    :inputSchema {:type "object"
-                  :properties {:namespace {:type "string" :description "Namespace containing the function"}
-                              :function {:type "string" :description "Function name to analyze"}
-                              :direction {:type "string" :description "Direction: 'callers' (who calls this)" :enum ["callers"]}
-                              :max-depth {:type "number" :description "Maximum depth to traverse (default: 3)"}}
-                  :required ["namespace" "function"]}
-    :tool-fn call-hierarchy-tool}
-   
-   {:name "usage-finder"
+  [{:name "usage-finder"
     :description "Find all usages of a symbol across the project with detailed analysis"
     :inputSchema {:type "object"
                   :properties {:namespace {:type "string" :description "Namespace containing the symbol"}

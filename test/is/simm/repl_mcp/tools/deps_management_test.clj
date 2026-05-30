@@ -63,4 +63,18 @@
       (is (contains? result :content))
       (is (vector? (:content result)))
       (is (= "text" (:type (first (:content result)))))
-      (is (str/includes? (:text (first (:content result))) "available")))))
+      (is (str/includes? (:text (first (:content result))) "available"))))
+
+  (testing "add-libs-tool handler reports missing nREPL client through safe nREPL path"
+    (let [tool-fn (:tool-fn (first (filter #(= "add-libs" (:name %)) deps-tools/tools)))
+          result (tool-fn {} {:coordinates '{org.clojure/data.json {:mvn/version "2.5.1"}}})]
+      (is (map? result))
+      (is (contains? result :content))
+      (is (str/includes? (:text (first (:content result))) "Error"))))
+
+  (testing "sync-deps-tool handler reports missing nREPL client through safe nREPL path"
+    (let [tool-fn (:tool-fn (first (filter #(= "sync-deps" (:name %)) deps-tools/tools)))
+          result (tool-fn {} {})]
+      (is (map? result))
+      (is (contains? result :content))
+      (is (str/includes? (:text (first (:content result))) "Error")))))

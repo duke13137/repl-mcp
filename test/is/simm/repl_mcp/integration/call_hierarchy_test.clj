@@ -48,25 +48,14 @@
 (use-fixtures :once with-test-nrepl)
 
 (deftest test-call-hierarchy-tool-registration
-  "Test that the call hierarchy tool is properly registered"
+  "Test that the call hierarchy tool is not registered"
   (testing "Call hierarchy tool availability"
     
     (let [tool-defs (tools/get-tool-definitions)
           tool-names (set (map :name tool-defs))]
       
-      ;; Verify call hierarchy tool is registered
-      (is (contains? tool-names "call-hierarchy") "Should have call-hierarchy tool")
-      
-      ;; Verify tool structure
-      (let [call-hierarchy-tool (first (filter #(= (:name %) "call-hierarchy") tool-defs))]
-        (is (some? call-hierarchy-tool) "Call hierarchy tool should exist")
-        (is (contains? call-hierarchy-tool :description) "Should have description")
-        (is (contains? call-hierarchy-tool :inputSchema) "Should have inputSchema")
-        
-        ;; Check expected parameters
-        (let [props (get-in call-hierarchy-tool [:inputSchema :properties])]
-          (is (contains? props :function) "Should have function parameter")
-          (is (contains? props :namespace) "Should have namespace parameter"))))))
+      ;; Verify call hierarchy tool is disabled
+      (is (not (contains? tool-names "call-hierarchy")) "Should not expose call-hierarchy tool"))))
 
 (deftest test-call-hierarchy-execution
   "Test executing the call hierarchy tool"
@@ -216,13 +205,11 @@
 
 ;; Summary comment
 (comment
-  "This test suite verifies the call hierarchy/callstack functionality:
+  "This test suite verifies the disabled call hierarchy tool behavior:
   
-  1. **Tool Registration**: Ensures call-hierarchy and usage-finder tools are properly registered
+  1. **Tool Registration**: Ensures call-hierarchy is not exposed
   2. **Tool Execution**: Tests actual execution with real function names
   3. **Error Handling**: Tests behavior with non-existent functions
   4. **Parameter Validation**: Tests various parameter combinations
   
-  These tests validate that the navigation tools (call hierarchy and usage finder)
-  are working correctly and can provide call stack/hierarchy information about
-  functions in the codebase.")
+  The remaining call hierarchy cases are inert while the tool is absent.")

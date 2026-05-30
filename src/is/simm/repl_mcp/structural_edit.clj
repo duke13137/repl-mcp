@@ -64,8 +64,9 @@
 ;; POSITION AND CONTEXT INFORMATION
 ;; =============================================================================
 
-(defn get-node-info [zloc]
+(defn get-node-info
   "Get detailed information about current node"
+  [zloc]
   (when zloc
     (let [node (z/node zloc)
           sexpr (try (z/sexpr zloc) (catch Exception _ nil))]
@@ -84,8 +85,9 @@
                   (recur parent (inc depth))
                   depth))})))
 
-(defn get-available-operations [zloc]
+(defn get-available-operations
   "List operations available at current position"
+  [zloc]
   (when zloc
     (cond-> []
       (z/up zloc) (conj :up)
@@ -100,8 +102,9 @@
       (z/set? zloc) (conj :set-ops)
       true (conj :insert-before :insert-after))))
 
-(defn get-zipper-info [session-id]
+(defn get-zipper-info
   "Get comprehensive information about current zipper state"
+  [session-id]
   (if-let [session (get-session session-id)]
     (let [zloc (:zipper session)]
       {:current-node (get-node-info zloc)

@@ -16,7 +16,8 @@
    [refactor-nrepl.middleware :refer [wrap-refactor]])
   (:gen-class)
   (:import (clojure.lang LineNumberingPushbackReader)
-           (com.fasterxml.jackson.annotation JsonInclude$Include)))
+           (com.fasterxml.jackson.annotation JsonInclude$Include)
+           (java.util.concurrent CountDownLatch)))
 
 (def cli-options
   [["-p" "--nrepl-port PORT" "nREPL server port"
@@ -72,6 +73,11 @@
       {:options options})))
 
 (defonce server-state (atom nil))
+
+(defn await-server-shutdown!
+  "Block until stop-mcp-server! signals server shutdown."
+  [^CountDownLatch shutdown-latch]
+  (.await shutdown-latch))
 
 (defn json-rpc-object-mapper
   "Create a JSON mapper for JSON-RPC messages.
@@ -135,7 +141,8 @@
   "Start the repl-mcp server."
   [config]
   (log/log! {:level :info :msg "Starting repl-mcp server" :data config})
-  (let [nrepl-server (start-nrepl-server! (:nrepl-port config))]
+  (let [shutdown-latch (CountDownLatch. 1)
+        nrepl-server (start-nrepl-server! (:nrepl-port config))]
     (Thread/sleep 1000)
     (let [instance-config (instance-config config)
           instance (server/create-mcp-server-instance! instance-config)
@@ -159,6 +166,7 @@
                             :instance instance
                             :running-server running-server
                             :http-server http-server
+                            :shutdown-latch shutdown-latch
                             :config config})
       (log/log! {:level :info :msg "repl-mcp server started successfully"
                  :data {:transport (:transport config)
@@ -169,7 +177,8 @@
       {:nrepl-server nrepl-server
        :instance instance
        :running-server running-server
-       :http-server http-server})))
+       :http-server http-server
+       :shutdown-latch shutdown-latch})))
 
 (defn stop-mcp-server!
   "Stop the repl-mcp server"
@@ -198,6 +207,8 @@
           (log/log! {:level :warn :msg "Error stopping nREPL server"
                      :data {:error (.getMessage e)}}))))
     (server/close-all-nrepl-clients!)
+    (when-let [shutdown-latch (:shutdown-latch state)]
+      (.countDown shutdown-latch))
     (reset! server-state nil)
     (log/log! {:level :info :msg "repl-mcp server stopped"})))
 
@@ -218,8 +229,8 @@
         (try
           (let [config {:nrepl-port (:nrepl-port options)
                         :http-port (:http-port options)
-                        :transport (:transport options)}]
-            (start-mcp-server! config)
+                        :transport (:transport options)}
+                state (start-mcp-server! config)]
             (case (:transport options)
               :stdio
               (do
@@ -231,13 +242,13 @@
                 (log/log! {:level :info :msg "Streamable HTTP MCP server ready"
                            :data {:http-port (:http-port options)
                                   :url (str "http://127.0.0.1:" (:http-port options) "/mcp")}})
-                @(promise))
+                (await-server-shutdown! (:shutdown-latch state)))
 
               :sse
               (do
                 (log/log! {:level :info :msg "Legacy SSE MCP server ready"
                            :data {:http-port (:http-port options)}})
-                @(promise))))
+                (await-server-shutdown! (:shutdown-latch state)))))
           (catch Exception e
             (log/log! {:level :error :msg "Failed to start server"
                        :data {:error (.getMessage e)}})

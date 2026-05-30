@@ -233,7 +233,7 @@
     :description "Get function documentation and signatures using cider-nrepl's eldoc operation"
     :inputSchema {:type "object"
                   :properties {:symbol {:type "string" :description "Symbol to get documentation for"}
-                              :ns {:type "string" :description "Namespace context (defaults to 'user')"}}
+                               :ns {:type "string" :description "Namespace context (defaults to 'user')"}}
                   :required ["symbol"]}
     :tool-fn eldoc-tool}
    
@@ -241,7 +241,7 @@
     :description "Get code completion candidates using cider-nrepl's complete operation"
     :inputSchema {:type "object"
                   :properties {:prefix {:type "string" :description "Prefix to complete"}
-                              :ns {:type "string" :description "Namespace context (defaults to 'user')"}}
+                               :ns {:type "string" :description "Namespace context (defaults to 'user')"}}
                   :required ["prefix"]}
     :tool-fn complete-tool}
    
@@ -249,7 +249,7 @@
     :description "Search for symbols matching a pattern using cider-nrepl's apropos operation"
     :inputSchema {:type "object"
                   :properties {:query {:type "string" :description "Search query/pattern"}
-                              :ns {:type "string" :description "Namespace to search in (optional)"}}
+                               :ns {:type "string" :description "Namespace to search in (optional)"}}
                   :required ["query"]}
     :tool-fn apropos-tool}
    
@@ -263,7 +263,7 @@
     :description "Get enhanced symbol information using cider-nrepl's info operation"
     :inputSchema {:type "object"
                   :properties {:symbol {:type "string" :description "Symbol to get info for"}
-                              :ns {:type "string" :description "Namespace context (defaults to 'user')"}}
+                               :ns {:type "string" :description "Namespace context (defaults to 'user')"}}
                   :required ["symbol"]}
     :tool-fn info-tool}
    

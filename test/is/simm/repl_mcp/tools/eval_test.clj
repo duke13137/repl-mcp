@@ -1,6 +1,7 @@
 (ns is.simm.repl-mcp.tools.eval-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [is.simm.repl-mcp.tools.eval :as eval-tools]
+            [is.simm.repl-mcp.tools.nrepl-utils :as nrepl-utils]
             [clojure.string :as str]
             [clojure.java.io :as io]
             [nrepl.server :as nrepl-server]
@@ -35,6 +36,20 @@
         (is (contains? result :status))
         (is (contains? result :error))
         (is (= (:status result) :error))))))
+
+(deftest process-eval-response-error-status-test
+  (testing "nREPL exception responses are errors even without stderr"
+    (let [result (nrepl-utils/process-eval-response
+                  [{:ex "java.lang.RuntimeException"
+                    :status #{:eval-error :done}}])]
+      (is (= (:status result) :error))
+      (is (str/includes? (:error result) "java.lang.RuntimeException"))))
+
+  (testing "nREPL eval-error statuses are errors even without exception class"
+    (let [result (nrepl-utils/process-eval-response
+                  [{:status #{:eval-error :done}}])]
+      (is (= (:status result) :error))
+      (is (str/includes? (:error result) "Evaluation failed")))))
 
 (deftest mcp-contract-test
   (testing "eval tools provide basic MCP contract compliance"

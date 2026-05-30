@@ -3,7 +3,7 @@
   (:require 
    [clojure.edn :as edn]
    [clojure.string :as str]
-   [nrepl.core :as nrepl]
+   [is.simm.repl-mcp.tools.nrepl-utils :as nrepl-utils]
    [taoensso.telemere :as log]))
 
 ;; ===============================================
@@ -14,10 +14,10 @@
   "Parse library coordinates from various input formats"
   [coords-input]
   (cond
-    (map? coords-input) coords-input
+    (and (map? coords-input) (seq coords-input)) coords-input
     (string? coords-input) (try
                              (let [parsed (edn/read-string coords-input)]
-                               (if (map? parsed)
+                               (if (and (map? parsed) (seq parsed))
                                  parsed
                                  (throw (ex-info "Coordinates must be a map"
                                                  {:input coords-input :parsed parsed}))))
@@ -122,10 +122,15 @@
                                      {:status :success :libraries %s :message \"Libraries added successfully\"})"
                                  (pr-str parsed-coords)
                                  (pr-str (vec (keys parsed-coords))))
-            response (first (nrepl/message nrepl-client {:op "eval" :code add-libs-code}))
-            result (if (:ex response)
-                     {:status :error :error (or (:ex response) "Unknown error")}
-                     (read-string (:value response)))]
+            nrepl-result (nrepl-utils/safe-nrepl-message nrepl-client
+                                                          {:op "eval" :code add-libs-code}
+                                                          :operation-name "Library addition")
+            result (if (= (:status nrepl-result) :success)
+                     (let [eval-result (nrepl-utils/process-eval-response (:responses nrepl-result))]
+                       (if (= (:status eval-result) :success)
+                         (edn/read-string (:value eval-result))
+                         eval-result))
+                     nrepl-result)]
         
         (log/log! {:level :info :msg "add-libs tool result" :data {:result result}})
         {:content [{:type "text" 
@@ -148,10 +153,15 @@
       (let [sync-deps-code "(let [sync-deps (requiring-resolve 'clojure.repl.deps/sync-deps)]
                               (sync-deps)
                               {:status :success :message \"Project dependencies synced from deps.edn\"})"
-            response (first (nrepl/message nrepl-client {:op "eval" :code sync-deps-code}))
-            result (if (:ex response)
-                     {:status :error :error (or (:ex response) "Unknown error")}
-                     (read-string (:value response)))]
+            nrepl-result (nrepl-utils/safe-nrepl-message nrepl-client
+                                                          {:op "eval" :code sync-deps-code}
+                                                          :operation-name "Dependency synchronization")
+            result (if (= (:status nrepl-result) :success)
+                     (let [eval-result (nrepl-utils/process-eval-response (:responses nrepl-result))]
+                       (if (= (:status eval-result) :success)
+                         (edn/read-string (:value eval-result))
+                         eval-result))
+                     nrepl-result)]
         
         (log/log! {:level :info :msg "sync-deps tool result" :data {:result result}})
         {:content [{:type "text" 

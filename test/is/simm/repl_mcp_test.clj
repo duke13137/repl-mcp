@@ -4,6 +4,7 @@
             [jsonista.core :as j]
             [plumcp.core.schema.schema-defs :as schema-defs])
   (:import (clojure.lang LineNumberingPushbackReader)
+           (java.util.concurrent CountDownLatch TimeUnit)
            (java.io StringReader)))
 
 (deftest listen-messages-parse-error-preserves-null-id-test
@@ -21,3 +22,16 @@
         (is (= {:code schema-defs/error-code-parse-error :message "Parse error" :data {}} (:error response)))
         (is (contains? response :id))
         (is (nil? (:id response)))))))
+
+(deftest stop-mcp-server-releases-shutdown-waiters-test
+  (testing "stop-mcp-server! releases HTTP/SSE waiters"
+    (let [shutdown-latch (CountDownLatch. 1)
+          waiter (future (repl-mcp/await-server-shutdown! shutdown-latch))]
+      (try
+        (reset! repl-mcp/server-state {:shutdown-latch shutdown-latch})
+        (repl-mcp/stop-mcp-server!)
+        (is (.await shutdown-latch 100 TimeUnit/MILLISECONDS))
+        (is (realized? waiter))
+        (finally
+          (future-cancel waiter)
+          (reset! repl-mcp/server-state nil))))))

@@ -3,6 +3,7 @@
   (:require 
    [clojure.string :as str]
    [clojure.java.io :as io]
+   [rewrite-clj.zip :as z]
    [taoensso.telemere :as log]))
 
 ;; ===============================================
@@ -59,8 +60,7 @@
             call-pattern (re-pattern (str "\\b" old-name "\\b"))
             final-content (str/replace content-with-def call-pattern new-name)
             
-            replacements (- (count (str/split final-content (re-pattern new-name)))
-                           (count (str/split content (re-pattern old-name))))]
+            replacements (count (re-seq (re-pattern (str "\\b" old-name "\\b")) content))]
         
         ;; Write back to file
         (spit file-path final-content)
@@ -157,6 +157,21 @@
       {:error (.getMessage e)
        :status :error})))
 
+(defn- defn-form?
+  [zloc function-name]
+  (and (= :list (z/tag zloc))
+       (= 'defn (try (first (z/sexpr zloc)) (catch Exception _ nil)))
+       (= (symbol function-name) (try (second (z/sexpr zloc)) (catch Exception _ nil)))))
+
+(defn- find-defn-loc
+  [zloc function-name]
+  (loop [loc zloc]
+    (cond
+      (nil? loc) nil
+      (z/end? loc) nil
+      (defn-form? loc function-name) loc
+      :else (recur (z/next loc)))))
+
 (defn replace-function-definition
   "Replace an entire function definition with a new implementation"
   [file-path function-name new-implementation]
@@ -166,24 +181,12 @@
     
     (if (.exists (io/file file-path))
       (let [content (slurp file-path)
-            lines (str/split-lines content)
-            pattern (re-pattern (str "\\(defn\\s+" function-name "\\b"))
-            
-            ;; Find start of function
-            start-line (atom nil)
-            _ (doseq [[idx line] (map-indexed vector lines)]
-                (when (and (not @start-line) (re-find pattern line))
-                  (reset! start-line idx)))
-            
-            ;; Simple replacement: replace entire function (this is a simplified version)
-            new-content (if @start-line
-                         (str/replace content 
-                                    (re-pattern (str "\\(defn\\s+" function-name "[^\\)]*\\)[^\\(]*\\([^\\)]*\\)"))
-                                    new-implementation)
-                         content)]
+            root-loc (z/of-string content)
+            target-loc (find-defn-loc root-loc function-name)]
         
-        (if @start-line
-          (do
+        (if target-loc
+          (let [replacement-node (z/node (z/of-string new-implementation))
+                new-content (z/root-string (z/replace target-loc replacement-node))]
             (spit file-path new-content)
             {:replaced true
              :function-name function-name

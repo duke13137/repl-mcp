@@ -81,3 +81,36 @@
         (is (map? result))
         (is (contains? result :content))
         (is (str/includes? (:text (first (:content result))) "Error"))))))
+
+(deftest replace-function-definition-test
+  (testing "replace-function-definition preserves surrounding forms for multi-arity functions"
+    (let [temp-file (str (System/getProperty "java.io.tmpdir") "/test-" (System/currentTimeMillis) ".clj")
+          before "(ns test.file)\n\n(defn greet\n  \"Say hello\"\n  ([name] (str \"Hello, \" name))\n  ([name greeting] (str greeting \", \" name)))\n\n(defn untouched [] :ok)\n"
+          replacement "(defn greet [name]\n  \"Hi\"\n  (str \"Hi \" name))"]
+      (try
+        (spit temp-file before)
+        (let [result (function-refactor-tools/replace-function-definition temp-file "greet" replacement)
+              after (slurp temp-file)]
+          (is (= (:status result) :success))
+          (is (str/includes? after replacement))
+          (is (str/includes? after "(defn untouched [] :ok)"))
+          (is (not (str/includes? after "))))\n\n(defn untouched"))))
+        (finally
+          (when (.exists (io/file temp-file))
+            (.delete (io/file temp-file)))))))
+
+  (testing "replace-function-definition handles nested forms in the replacement"
+    (let [temp-file (str (System/getProperty "java.io.tmpdir") "/test-" (System/currentTimeMillis) ".clj")
+          before "(ns test.file)\n\n(defn greet [name] (str \"Hello, \" name))\n\n(defn untouched [] :ok)\n"
+          replacement "(defn greet [name]\n  (let [format-name (fn [x] (str \"Hi \" x))]\n    (format-name name)))"]
+      (try
+        (spit temp-file before)
+        (let [result (function-refactor-tools/replace-function-definition temp-file "greet" replacement)
+              after (slurp temp-file)]
+          (is (= (:status result) :success))
+          (is (str/includes? after replacement))
+          (is (str/includes? after "(defn untouched [] :ok)"))
+          (is (not (str/includes? after "(defn greet [name] (str \"Hello, \" name))"))))
+        (finally
+          (when (.exists (io/file temp-file))
+            (.delete (io/file temp-file))))))))
