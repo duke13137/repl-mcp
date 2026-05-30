@@ -8,7 +8,7 @@
         org.clojure/data.json {:mvn/version "2.5.2"}
         pogonos/pogonos {:mvn/version "0.2.1"}
         ;; mcp-toolkit dependencies
-        funcool/promesa {:mvn/version "12.0.777"}
+        funcool/promesa {:mvn/version "12.0.0-RC2"}
         metosin/jsonista {:mvn/version "1.0.0"}
         http-kit/http-kit {:mvn/version "2.9.0-beta3"}
         metosin/reitit {:mvn/version "0.10.1"}

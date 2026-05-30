@@ -79,10 +79,10 @@
           
           ;; Prepare session config with defaults
           session-config {:tools (or (:tools config) (tools/get-tool-definitions))
-                         :prompts (or (:prompts config) [])
-                         :resources (or (:resources config) [])
-                         :server-info (or (:server-info config) 
-                                         {:name "repl-mcp" :version "1.0.0"})}
+                          :prompts (or (:prompts config) [])
+                          :resources (or (:resources config) [])
+                          :server-info (or (:server-info config)
+                                          {:name "repl-mcp" :version "1.0.0"})}
           
           ;; Create session state using mcp-toolkit
           session-state (mcp-server/create-session session-config)
@@ -96,10 +96,10 @@
           
           ;; Create instance object
           instance {:context mcp-context
-                   :session session-atom
-                   :config config
-                   :nrepl-client nrepl-client
-                   :created-at (java.time.Instant/now)}]
+                    :session session-atom
+                    :config config
+                    :nrepl-client nrepl-client
+                    :created-at (java.time.Instant/now)}]
       
       (log/log! {:level :info :msg "MCP server instance created successfully" 
                  :data {:has-nrepl-client (some? nrepl-client)

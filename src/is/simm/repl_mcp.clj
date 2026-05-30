@@ -15,6 +15,7 @@
    [refactor-nrepl.middleware :refer [wrap-refactor]])
   (:gen-class)
   (:import (clojure.lang LineNumberingPushbackReader)
+           (com.fasterxml.jackson.annotation JsonInclude$Include)
            (java.io OutputStreamWriter)))
 
 ;; ===============================================
@@ -79,11 +80,20 @@
 
 (defonce server-state (atom nil))
 
+(defn json-rpc-object-mapper
+  "Create a JSON mapper for JSON-RPC messages.
+
+  JSON-RPC parse-error responses must include an explicit `\"id\": null`;
+  force Jackson to keep nil map values so that required null is not omitted."
+  [opts]
+  (doto (j/object-mapper opts)
+    (.setSerializationInclusion JsonInclude$Include/ALWAYS)))
+
 (defn listen-messages 
   "Listen for JSON-RPC messages on stdin and handle them using mcp-toolkit"
   [context ^LineNumberingPushbackReader reader]
   (let [{:keys [send-message]} context
-        json-mapper (j/object-mapper {:decode-key-fn keyword})]
+        json-mapper (json-rpc-object-mapper {:decode-key-fn keyword})]
     (loop []
       ;; line = nil means that the reader is closed
       (when-some [line (.readLine reader)]
@@ -114,8 +124,8 @@
                     (send-message {:jsonrpc "2.0"
                                    :id msg-id
                                    :error {:code -32603
-                                          :message "Internal error"
-                                          :data {:error (.getMessage e)}}}))))
+                                           :message "Internal error"
+                                           :data {:error (.getMessage e)}}}))))
               (recur))))))))
 
 (defn start-nrepl-server!
@@ -151,9 +161,9 @@
     
     ;; Create instance using simplified API
     (let [instance-config {:tools (tools/get-tool-definitions)
-                          :nrepl-config {:port (:nrepl-port config)
-                                        :ip "127.0.0.1"}
-                          :server-info {:name "repl-mcp-simple" :version "1.0.0"}}
+                           :nrepl-config {:port (:nrepl-port config)
+                                          :ip "127.0.0.1"}
+                           :server-info {:name "repl-mcp-simple" :version "1.0.0"}}
           ;; Create instance directly - no complex lifecycle management
           instance (server/create-mcp-server-instance! instance-config)
           ;; Start HTTP server if transport is SSE
@@ -170,9 +180,9 @@
 
       ;; Store state for cleanup
       (reset! server-state {:nrepl-server nrepl-server
-                           :instance instance
-                           :http-server http-server
-                           :config config})
+                            :instance instance
+                            :http-server http-server
+                            :config config})
 
       (log/log! {:level :info :msg "Simplified repl-mcp server started successfully" 
                  :data {:transport (:transport config)
@@ -263,7 +273,7 @@
                       context {:session session
                                :nrepl-client nrepl-client
                                :send-message (let [^OutputStreamWriter writer *out*
-                                                   json-mapper (j/object-mapper {:encode-key-fn name})]
+                                                   json-mapper (json-rpc-object-mapper {:encode-key-fn name})]
                                                (fn [message]
                                                  (.write writer (j/write-value-as-string message json-mapper))
                                                  (.write writer "\n")
@@ -288,7 +298,7 @@
 (comment
   ;; Start server for development
   (start-mcp-server! {:nrepl-port 47888
-                     :transport :stdio})
+                      :transport :stdio})
   
   ;; Stop server
   (stop-mcp-server!)
@@ -302,8 +312,8 @@
       {:name "hello"
        :description "Say hello"
        :inputSchema {:type "object"
-                    :properties {:name {:type "string"}}
-                    :required ["name"]}
+                     :properties {:name {:type "string"}}
+                     :required ["name"]}
        :tool-fn (fn [context {:keys [name]}]
                  {:content [{:type "text" :text (str "Hello, " name "!")}]})})
     
