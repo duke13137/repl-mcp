@@ -2,7 +2,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [is.simm.repl-mcp :as repl-mcp]
             [jsonista.core :as j]
-            [mcp-toolkit.json-rpc :as json-rpc])
+            [plumcp.core.schema.schema-defs :as schema-defs])
   (:import (clojure.lang LineNumberingPushbackReader)
            (java.io StringReader)))
 
@@ -18,6 +18,6 @@
       (repl-mcp/listen-messages context reader)
       (is (= 1 (count @encoded-responses)))
       (let [response (j/read-value (first @encoded-responses) json-mapper)]
-        (is (= (:error json-rpc/parse-error-response) (:error response)))
+        (is (= {:code schema-defs/error-code-parse-error :message "Parse error" :data {}} (:error response)))
         (is (contains? response :id))
         (is (nil? (:id response)))))))

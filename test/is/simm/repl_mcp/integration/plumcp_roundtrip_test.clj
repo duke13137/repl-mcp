@@ -1,5 +1,5 @@
-(ns is.simm.repl-mcp.integration.mcp-toolkit-roundtrip-test
-  "Complete roundtrip tests using real mcp-toolkit client-server communication"
+(ns is.simm.repl-mcp.integration.plumcp-roundtrip-test
+  "Complete roundtrip tests using real PlumCP client-server communication"
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.string :as str]
             [is.simm.repl-mcp.test-fixtures :as fixtures]
@@ -165,12 +165,12 @@
 ;; Summary Test
 ;; ===============================================
 
-(deftest mcp-toolkit-roundtrip-completeness-test
-  "Verify MCP toolkit roundtrip tests cover essential functionality"
-  (testing "MCP toolkit integration test coverage verification"
+(deftest PlumCP-roundtrip-completeness-test
+  "Verify PlumCP roundtrip tests cover essential functionality"
+  (testing "PlumCP integration test coverage verification"
     
     ;; Verify we have the essential roundtrip tests
-    (let [test-vars (vals (ns-publics 'is.simm.repl-mcp.integration.mcp-toolkit-roundtrip-test))
+    (let [test-vars (vals (ns-publics 'is.simm.repl-mcp.integration.plumcp-roundtrip-test))
           test-names (map (comp str :name meta) test-vars)
           test-name-set (set test-names)]
       

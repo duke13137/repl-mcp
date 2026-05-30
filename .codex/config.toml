@@ -1,0 +1,4 @@
+[mcp_servers.clojure-mcp]
+url = "http://localhost:7888/mcp"
+default_tools_approval_mode = "approve"
+enabled = true

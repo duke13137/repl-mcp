@@ -360,7 +360,7 @@
 ;; ===============================================
 
 (def tools
-  "Profiling tool definitions for mcp-toolkit"
+  "Profiling tool definitions for PlumCP"
   [{:name "profile-cpu"
     :description "Profile CPU usage of Clojure code with comprehensive analysis"
     :inputSchema {:type "object"

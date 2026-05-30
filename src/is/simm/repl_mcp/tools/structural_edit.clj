@@ -134,7 +134,7 @@
 ;; =============================================================================
 
 (def tools
-  "Structural editing tool definitions for mcp-toolkit"
+  "Structural editing tool definitions for PlumCP"
   [{:name "structural-create-session"
     :description "Create a new structural editing session from file or code string"
     :inputSchema {:type "object"

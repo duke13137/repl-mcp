@@ -90,7 +90,7 @@
 ;; ===============================================
 
 (def tools
-  "Test generation tool definitions for mcp-toolkit"
+  "Test generation tool definitions for PlumCP"
   [{:name "create-test-skeleton"
     :description "Generate a comprehensive test skeleton for a Clojure function with multiple test cases and documentation"
     :inputSchema {:type "object"

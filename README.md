@@ -7,8 +7,8 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Cl
 ## Key Features
 
 - **51 Development Tools**: Comprehensive toolset for evaluation, refactoring, structural editing, testing, profiling, and more
-- **Pure Clojure Implementation**: Built on mcp-toolkit for simplicity and reliability
-- **Dual Transport Support**: STDIO (for local development) and HTTP+SSE (for production)
+- **Pure Clojure Implementation**: Built on PlumCP for simplicity and reliability
+- **Transport Support**: STDIO, streamable HTTP, and legacy HTTP+SSE
 - **nREPL Integration**: Full cider-nrepl and refactor-nrepl middleware support
 - **Hot Reloading**: Add dependencies at runtime without REPL restart (Clojure 1.12+)
 - **Performance Profiling**: CPU and memory profiling with clj-async-profiler integration
@@ -40,7 +40,10 @@ Add the `:repl-mcp` alias to your `deps.edn`:
 # STDIO transport (default, for development)
 clojure -M:repl-mcp
 
-# HTTP+SSE transport (for production)
+# Streamable HTTP transport at /mcp
+clojure -M:repl-mcp --transport http --http-port 8080
+
+# Legacy HTTP+SSE transport at /sse and /messages/:id
 clojure -M:repl-mcp --transport sse --http-port 8080
 
 # Custom nREPL port
@@ -49,7 +52,7 @@ clojure -M:repl-mcp --nrepl-port 27889
 
 This starts:
 - **nREPL server** on localhost:17888 (default) with cider-nrepl and refactor-nrepl middleware
-- **MCP server** with your chosen transport (STDIO or HTTP+SSE)
+- **MCP server** with your chosen transport (STDIO, streamable HTTP, or legacy HTTP+SSE)
 
 ### Assistant Integration
 
@@ -59,7 +62,10 @@ This starts:
 # Add with STDIO transport
 claude mcp add repl-mcp -- clojure -M:repl-mcp
 
-# Or with HTTP+SSE transport (specify unique port per project)
+# Or with streamable HTTP transport at /mcp (specify unique port per project)
+claude mcp add repl-mcp http://localhost:8080/mcp
+
+# Legacy SSE remains available at /sse
 claude mcp add --transport sse repl-mcp http://localhost:8080/sse
 ```
 
@@ -176,9 +182,9 @@ profile-alloc:
 
 ## Architecture
 
-Built on **mcp-toolkit** for a clean, maintainable architecture:
+Built on **PlumCP** for a clean, maintainable architecture:
 
-- **Transport Layer**: Unified abstraction for STDIO and HTTP+SSE
+- **Transport Layer**: PlumCP STDIO and streamable HTTP, plus legacy SSE compatibility
 - **Tool System**: Simple tool registration with consistent patterns
 - **nREPL Integration**: Direct communication with your project's REPL
 - **Error Handling**: Robust error handling throughout
@@ -230,4 +236,4 @@ Distributed under the MIT license.
 
 ## Acknowledgments
 
-Built on [mcp-toolkit](https://github.com/metosin/mcp-toolkit) by Metosin for simplified MCP server implementation.
+Built on PlumCP for MCP server transports and protocol handling.

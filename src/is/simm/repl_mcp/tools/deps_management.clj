@@ -177,7 +177,7 @@
 ;; ===============================================
 
 (def tools
-  "Dependency management tool definitions for mcp-toolkit"
+  "Dependency management tool definitions for PlumCP"
   [{:name "add-libs"
     :description "Add libraries to the running REPL without restart (Clojure 1.12+)"
     :inputSchema {:type "object"

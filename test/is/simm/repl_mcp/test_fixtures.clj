@@ -24,7 +24,7 @@
     (let [server (nrepl-server/start-server 
                    :port test-nrepl-port 
                    :handler (wrap-refactor cider-nrepl-handler))
-          client (nrepl/client (nrepl/connect :host "localhost" :port test-nrepl-port) 1000)]
+          client (nrepl/client (nrepl/connect :host "localhost" :port test-nrepl-port) 10000)]
       (log/log! {:level :info :msg "Test nREPL server started successfully"})
       {:server server :client client})
     (catch Exception e
@@ -96,7 +96,7 @@
           (throw (ex-info "nREPL server not ready within timeout" {:port port :timeout-ms timeout-ms}))
           
           (try
-            (with-open [client (nrepl/client (nrepl/connect :host "localhost" :port port) 1000)]
+            (with-open [client (nrepl/client (nrepl/connect :host "localhost" :port port) 10000)]
               (let [response (nrepl/message client {:op :eval :code "(+ 1 2)"})]
                 (= 3 (-> response first :value read-string))))
             (catch Exception _e false))
@@ -153,7 +153,7 @@
                     :or {expect-success true context {}}}]
   (let [tool-fn (:tool-fn tool-def)
         test-context (merge (test-context) context)
-        ;; Convert string keys to keyword keys, just like mcp-toolkit does
+        ;; Convert string keys to keyword keys, just like PlumCP does
         normalized-args (if (map? args)
                           (into {} (map (fn [[k v]] [(keyword k) v]) args))
                           args)

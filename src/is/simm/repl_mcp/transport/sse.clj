@@ -1,10 +1,11 @@
 (ns is.simm.repl-mcp.transport.sse
-  "SSE transport implementation for repl-mcp based on mcp-toolkit patterns"
+  "Legacy SSE transport for repl-mcp backed by PlumCP JSON-RPC handling."
   (:require
    [clojure.string :as str]
    [jsonista.core :as j]
-   [mcp-toolkit.json-rpc :as json-rpc]
    [org.httpkit.server :as http-kit]
+   [plumcp.core.deps.runtime :as runtime]
+   [plumcp.core.deps.runtime-support :as runtime-support]
    [reitit.ring :as reitit]
    [taoensso.telemere :as log]))
 
@@ -15,7 +16,7 @@
   (try
     (j/read-value body object-mapper)
     (catch Exception e
-      (log/log! {:level :error :msg "JSON parse error" 
+      (log/log! {:level :error :msg "JSON parse error"
                  :data {:error (.getMessage e)}})
       nil)))
 
@@ -37,7 +38,7 @@
          (not (valid-content-type? req))) (error-response "Invalid Content-Type header" 400)
     :else nil))
 
-(def base-sse-headers 
+(def base-sse-headers
   {"Content-Type"  "text/event-stream"
    "Cache-Control" "no-cache, no-transform"
    "Access-Control-Allow-Origin" "*"
@@ -66,7 +67,6 @@
 
 (defonce connections (atom {}))
 
-;; Heartbeat mechanism
 (def heartbeat-interval 15000)
 (defonce heartbeat-running? (atom false))
 (defonce heartbeat-future (atom nil))
@@ -74,18 +74,18 @@
 (defn start-heartbeat-loop! []
   (reset! heartbeat-running? true)
   (reset! heartbeat-future
-    (future
-      (log/log! {:level :info :msg "Starting SSE heartbeat loop"})
-      (loop []
-        (when @heartbeat-running?
-          (Thread/sleep heartbeat-interval)
-          (doseq [[session-id session-data] @connections]
-            (try
-              (channel-send! (:session/channel session-data) "ping" "{}")
-              (catch Exception e
-                (log/log! {:level :error :msg "Error sending heartbeat"
-                           :data {:session-id session-id :error (.getMessage e)}}))))
-          (recur))))))
+          (future
+            (log/log! {:level :info :msg "Starting SSE heartbeat loop"})
+            (loop []
+              (when @heartbeat-running?
+                (Thread/sleep heartbeat-interval)
+                (doseq [[session-id session-data] @connections]
+                  (try
+                    (channel-send! (:session/channel session-data) "ping" "{}")
+                    (catch Exception e
+                      (log/log! {:level :error :msg "Error sending heartbeat"
+                                 :data {:session-id session-id :error (.getMessage e)}}))))
+                (recur))))))
 
 (defn stop-heartbeat-loop! []
   (reset! heartbeat-running? false)
@@ -94,15 +94,30 @@
     (reset! heartbeat-future nil))
   (log/log! {:level :info :msg "Stopped SSE heartbeat loop"}))
 
-(defn new-session-id [] 
+(defn new-session-id []
   (str (java.util.UUID/randomUUID)))
 
-(defn assoc-session! [session-id channel mcp-context]
-  (let [data {:session/session-id session-id
+(defn session-context [instance session-id]
+  (let [base-context (runtime/upsert-runtime {} (:runtime instance))]
+    (runtime-support/set-server-session
+     base-context
+     session-id
+     (fn [_context message]
+       (when-let [session (get @connections session-id)]
+         (channel-send! (:session/channel session) "message" (->json message)))))
+    (let [session (runtime-support/get-server-session base-context session-id)]
+      (-> base-context
+          (runtime/?>assoc runtime/?session-id session-id)
+          (runtime/?>assoc runtime/?session session)))))
+
+(defn assoc-session! [session-id channel instance]
+  (let [context (session-context instance session-id)
+        data {:session/session-id session-id
               :session/channel channel
-              :session/context mcp-context
+              :session/context context
+              :session/jsonrpc-handler (:jsonrpc-handler instance)
               :session/send! (fn [event data]
-                              (channel-send! channel event data))}]
+                               (channel-send! channel event data))}]
     (swap! connections assoc session-id data)
     data))
 
@@ -112,22 +127,18 @@
 (defn fetch-session [session-id]
   (get @connections session-id))
 
-(defn make-send-message [{:session/keys [send!]}]
-  (fn [message]
-    (log/log! {:level :debug :msg "SSE outgoing message" :data {:message message}})
-    (send! "message" (->json message))))
-
 (defn handle-message-response [session message]
-  (let [context (assoc (:session/context session)
-                       :send-message (make-send-message session)
-                       :connection-id (:session/session-id session))]
+  (let [context (:session/context session)
+        jsonrpc-handler (:session/jsonrpc-handler session)
+        message-with-context (merge context message)]
     (log/log! {:level :debug :msg "SSE accepted message" :data {:message message}})
-    (json-rpc/handle-message context message))
+    (when-let [response (jsonrpc-handler message-with-context)]
+      (channel-send! (:session/channel session) "message" (->json response))))
   {:status 202
    :headers {"content-type" "text/plain"}
    :body "Accepted"})
 
-(defn handle-sse-stream [context-factory req]
+(defn handle-sse-stream [instance-factory req]
   (if-let [error-response (validate-request req)]
     error-response
     (let [session-id (new-session-id)]
@@ -136,11 +147,11 @@
                             (fn [channel]
                               (log/log! {:level :info :msg "SSE connection opened"
                                          :data {:session-id session-id}})
-                              (let [mcp-context (context-factory)
+                              (let [instance (instance-factory)
                                     {:session/keys [send!]} (assoc-session!
-                                                              session-id 
-                                                              channel
-                                                              mcp-context)]
+                                                             session-id
+                                                             channel
+                                                             instance)]
                                 (send-base-sse-response! req channel)
                                 (send! "endpoint" (str "/messages/" session-id))))
                             :on-close
@@ -158,19 +169,19 @@
         (error-response "Could not parse message" 400))
       (error-response "Session not found" 404))))
 
-(defn routes [context-factory]
+(defn routes [instance-factory]
   [""
-   ["/sse" {:get (partial handle-sse-stream context-factory)}]
+   ["/sse" {:get (partial handle-sse-stream instance-factory)}]
    ["/messages/:id" {:post handle-messages}]])
 
-(defn create-ring-handler [context-factory]
+(defn create-ring-handler [instance-factory]
   (reitit/ring-handler
-   (reitit/router (routes context-factory))))
+   (reitit/router (routes instance-factory))))
 
-(defn start-http-server! [context-factory port]
+(defn start-http-server! [instance-factory port]
   (log/log! {:level :info :msg "Starting HTTP+SSE server" :data {:port port}})
   (start-heartbeat-loop!)
-  (let [handler (create-ring-handler context-factory)]
+  (let [handler (create-ring-handler instance-factory)]
     (http-kit/run-server handler {:port port :legacy-return-value? false})))
 
 (defn stop-http-server! [server]

@@ -290,7 +290,7 @@
 ;; ===============================================
 
 (def tools
-  "Navigation tool definitions for mcp-toolkit"
+  "Navigation tool definitions for PlumCP"
   [{:name "call-hierarchy"
     :description "Analyze function call hierarchy (callers) in a Clojure project"
     :inputSchema {:type "object"

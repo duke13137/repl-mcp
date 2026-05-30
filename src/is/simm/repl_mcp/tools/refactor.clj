@@ -115,7 +115,7 @@
 ;; ===============================================
 
 (def tools
-  "Refactoring tool definitions for mcp-toolkit with safe nREPL interactions"
+  "Refactoring tool definitions for PlumCP with safe nREPL interactions"
   [{:name "clean-ns"
     :description "Clean and organize namespace declarations"
     :inputSchema {:type "object"

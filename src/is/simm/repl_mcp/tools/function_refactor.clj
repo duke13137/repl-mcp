@@ -318,7 +318,7 @@
 ;; ===============================================
 
 (def tools
-  "Function refactoring tool definitions for mcp-toolkit"
+  "Function refactoring tool definitions for PlumCP"
   [{:name "find-function-definition"
     :description "Find the definition of a function in a file"
     :inputSchema {:type "object"

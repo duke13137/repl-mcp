@@ -113,7 +113,7 @@
 ;; ===============================================
 
 (def tools
-  "Evaluation tool definitions for mcp-toolkit"
+  "Evaluation tool definitions for PlumCP"
   [{:name "eval"
     :description "Evaluate Clojure code in the connected nREPL session"
     :inputSchema {:type "object"

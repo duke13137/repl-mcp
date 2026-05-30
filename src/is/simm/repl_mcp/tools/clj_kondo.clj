@@ -345,7 +345,7 @@
 ;; ===============================================
 
 (def tools
-  "Clj-kondo tool definitions for mcp-toolkit"
+  "Clj-kondo tool definitions for PlumCP"
   [{:name "lint-code"
     :description "Lint Clojure code string for errors and style issues"
     :inputSchema {:type "object"

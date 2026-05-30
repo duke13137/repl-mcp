@@ -147,8 +147,7 @@
   [_mcp-context _arguments]
   (try
     (let [all-namespaces (all-ns)
-          server-prefixes ["is.simm.repl-mcp" "clojure." "nrepl." "cider." "refactor-" 
-                          "rewrite-" "taoensso." "pogonos." "orchard."]
+          server-prefixes ["is.simm.repl-mcp" "clojure." "nrepl." "cider." "refactor-" "rewrite-" "taoensso." "pogonos." "orchard." "plumcp." "jsonista." "org.httpkit." "reitit."]
           user-namespaces (filter (fn [ns]
                                    (let [ns-name (str (ns-name ns))]
                                      (not (some #(str/starts-with? ns-name %) server-prefixes))))
@@ -215,7 +214,7 @@
 ;; ===============================================
 
 (def tools
-  "Cider-nREPL tool definitions for mcp-toolkit with safe nREPL interactions"
+  "Cider-nREPL tool definitions for PlumCP with safe nREPL interactions"
   [{:name "format-code"
     :description "Format Clojure code using cider-nrepl's format-code operation"
     :inputSchema {:type "object"

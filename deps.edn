@@ -1,14 +1,14 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.4"}
         org.clojure/tools.cli {:mvn/version "1.4.256"}
-        ;; MCP toolkit - pure Clojure MCP implementation
-        fi.metosin/mcp-toolkit {:mvn/version "0.1.1-alpha"}
+        ;; MCP implementation
+        io.github.plumce/plumcp.core {:mvn/version "0.2.1"}
+        io.github.plumce/plumcp.core-json-jsonista {:mvn/version "0.2.1"}
         ;; Utility libraries
         com.rpl/specter {:mvn/version "1.1.6"}
         org.clojure/data.json {:mvn/version "2.5.2"}
         pogonos/pogonos {:mvn/version "0.2.1"}
-        ;; mcp-toolkit dependencies
-        funcool/promesa {:mvn/version "12.0.0-RC2"}
+        ;; Transport dependencies
         metosin/jsonista {:mvn/version "1.0.0"}
         http-kit/http-kit {:mvn/version "2.9.0-beta3"}
         metosin/reitit {:mvn/version "0.10.1"}

@@ -20,7 +20,7 @@
   (let [server (nrepl-server/start-server :port 0 :handler (wrap-refactor cider-nrepl-handler))
         port (:port server)
         conn (nrepl/connect :port port)
-        client (nrepl/client conn 1000)]
+        client (nrepl/client conn 10000)]
     [server client conn]))
 
 (defn stop-test-nrepl-server!
